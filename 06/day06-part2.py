@@ -16,6 +16,16 @@ with open('input.txt', 'r') as f:
 # ......#...'''
 # input_data = input_data.split('\n')
 
+# corner case from https://www.reddit.com/r/adventofcode/comments/1haik1k/comment/m194e0l/
+# input_data = '''#..#...
+# .......
+# .......
+# ...^...
+# #......
+# ..#..#.
+# .#.....'''
+# input_data = input_data.split('\n')
+
 grid = []
 for line in input_data:
   grid.append([i for i in line.strip()])
@@ -46,21 +56,23 @@ for row, row_values in enumerate(grid):
 def move_or_turn(cur_row, cur_col, heading_offsets, grid):
   try:
     # check the next location:
-    # print(f"Checking out {cur_row + heading_offsets[0]}, {cur_col + heading_offsets[1]}")
-    if grid[cur_row + heading_offsets[0]][cur_col + heading_offsets[1]] == '#':
-      # print(f"Bumped into obstacle at {cur_row + heading_offsets[0]}, {cur_col + heading_offsets[1]} while heading was {heading_offsets}")
+    new_row = cur_row + heading_offsets[0]
+    new_col = cur_col + heading_offsets[1]
+    if new_row < 0 or new_col <0:
+      raise IndexError
+    # print(f"Checking out {new_row}, {new_col}")
+    if grid[new_row][new_col] == '#':
+      # print(f"Bumped into obstacle at {new_row}, {new_col} while heading was {heading_offsets}")
       # turn as we've run into something
       heading_index = directions_clockwise.index(heading_offsets)
       if heading_index == 3:
         new_heading_index = 0
       else:
         new_heading_index = heading_index + 1
-      heading_offsets = directions_clockwise[new_heading_index]
-      return(cur_row, cur_col, heading_offsets)
+      rotated_heading_offsets = directions_clockwise[new_heading_index]
+      return cur_row, cur_col, rotated_heading_offsets
     else:
-      cur_row += heading_offsets[0]
-      cur_col += heading_offsets[1]
-      return(cur_row, cur_col, heading_offsets)
+      return new_row, new_col, heading_offsets
   except IndexError: # ran off with high indices
     raise IndexError
 
@@ -82,34 +94,37 @@ while cur_row >= 0 and cur_col >= 0:
   except IndexError:  # ran off with high indices
     break
 
-print(visited_squares)
+# print(visited_squares)
 
 loop_obstacles = set()
-# Test adding obstacles
+# Test adding obstacles (only on squares that were in the original path)
 for test_row, test_col in visited_squares:
-  if test_row >=0 and test_col >=0 and grid[test_row][test_col] != "#" and (test_row, test_col) != (start_row, start_col):
+  if (test_row, test_col) != (start_row, start_col):
     # initial data for test run
     cur_row, cur_col, heading_offsets = start_row, start_col, initial_heading_offsets
     bumped_obstacles = set()
 
+    # add a new obstacle into the grid
     test_grid = copy.deepcopy(grid)
     test_grid[test_row][test_col] = '#'
     print(f"Added obstacle to grid at {test_row, test_col}")
 
+    # run the grid
     while cur_row >= 0 and cur_col >= 0:
       try:
         new_row, new_col, new_heading_offsets = move_or_turn(cur_row, cur_col, heading_offsets, test_grid)
         if new_row == cur_row and new_col == cur_col:
-          #print(f"  Bumped into obstacle while at {cur_row}, {cur_col} and heading {heading_offsets}")
+          # print(f"  Bumped into obstacle while at {cur_row}, {cur_col} and heading {heading_offsets}")
 
           # Check if we're in a loop
           if (cur_row, cur_col, heading_offsets) in bumped_obstacles:
-            print(f"  Found loop by adding obstacle at {test_row}, {test_col}")
+            print(f"  * Found loop by adding obstacle at {test_row}, {test_col}")
             possible_loop_count += 1
             loop_obstacles.add((test_row, test_col))
             break
           else:
             bumped_obstacles.add((cur_row, cur_col, heading_offsets))
+            # print(bumped_obstacles)
 
           heading_offsets = new_heading_offsets
         else:
